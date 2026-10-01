@@ -17,7 +17,7 @@
 #tablePanel{break-inside:avoid;page-break-inside:avoid}
 #printMetadata{font-size:5.5pt;line-height:2.5mm;white-space:normal;overflow:hidden;max-height:8mm}
 #printSignatures{display:none;font-size:5.5pt;line-height:2.7mm;margin-top:2mm;grid-template-columns:repeat(3,minmax(0,1fr));gap:1mm 2mm;text-align:center}
-#printSignatures>div{border:1px solid #777;padding:.4mm;white-space:nowrap;overflow:hidden}
+#printSignatures>div{border:0;padding:.4mm;white-space:nowrap;overflow:hidden}
 #printSheet table{width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;font:8pt Arial,Tahoma,sans-serif;color:#000}
 #printSheet td{border:1px solid #000;text-align:center;vertical-align:middle;padding:0 1mm;overflow:hidden;white-space:nowrap}
 #printSheet .ps-top{height:7.3mm;font-size:11pt;font-weight:bold}
@@ -27,7 +27,7 @@
 #printSheet .ps-row td:not(:first-child){white-space:normal;overflow-wrap:anywhere;line-height:3.2mm;padding:.4mm .7mm}
 #printSheet .ps-num{font-weight:bold}
 #printSheet .ps-signatures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1mm 2mm;margin-top:2mm;font:7.5pt Arial,Tahoma,sans-serif;text-align:center}
-#printSheet .ps-signatures span{border:1px solid #000;padding:.5mm;white-space:nowrap;overflow:hidden}
+#printSheet .ps-signatures span{border:0;padding:.5mm;white-space:nowrap;overflow:hidden}
 #printMetadata>div:first-child{white-space:nowrap}
 #printMetadata .print-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:2mm}
 #printTitle{font-size:8pt;line-height:4mm}
@@ -145,7 +145,8 @@ $('backupBtn').addEventListener('click',()=>{try{persist();const payload={format
 els.restore.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(data.format!=='inventory-forms-backup-v1'||!data.states)throw new Error('هذا الملف ليس نسخة احتياطية من البرنامج.');for(const key of Object.keys(configs)){const saved=data.states[key];if(!saved)continue;if(!Array.isArray(saved.records)||saved.records.length>CAP)throw new Error('بيانات الاستمارة داخل النسخة الاحتياطية غير صالحة.');if(saved.template!==null&&saved.template!==undefined&&(!Array.isArray(saved.template)||saved.template.length>8_000_000))throw new Error('ملف النموذج داخل النسخة الاحتياطية غير صالح.');states[key]={...states[key],...saved}}if(data.profile){profile={...profile,...data.profile};profileReady=!!data.profileReady}persist();if(active){draw();setStatusForForm()}else if(profileReady)showHome();say('تم استرجاع العمل من النسخة الاحتياطية.')}catch(err){say(err.message||'تعذر استرجاع النسخة الاحتياطية.',true)}finally{e.target.value=''}});
 $('newForm').addEventListener('click',()=>{if(!active)return;if(!confirm('هل حفظت نسخة Excel؟ ستُمسح سجلات هذا النموذج من المسودة الحالية للبدء من جديد.'))return;current().records=[];persist();draw();resetForm();say('تم تصفير الاستمارة. المسودة السابقة محفوظة في ملف Excel الذي نزلته.')});
 function makePrintSheet(){const c=configs[active],sum=c.widths.reduce((a,b)=>a+b,0),widths=c.widths.map(w=>'<col style="width:'+((w/sum*100).toFixed(4))+'%">').join(''),header=profileHeader(),title=c.title,rows=Array.from({length:CAP},(_,i)=>{const r=current().records[i];return '<tr class="ps-row">'+['<td class="ps-num">'+(i+1)+'</td>',...c.columns.map(([id])=>'<td>'+esc(r?.[id]||'')+'</td>')].join('')+'</tr>'}).join(''),members=['counter','services','legal','oversight','sales','president'].map(id=>{const f=profileFields.find(x=>x[0]===id);return '<span><b>'+esc(f?.[1]||'')+':</b> '+esc(profile[id]||'')+'</span>'}).join('');$('printSheet').innerHTML='<table><colgroup>'+widths+'</colgroup><tbody><tr class="ps-top"><td colspan="'+(c.columns.length+1)+'">'+esc(header)+'</td></tr><tr class="ps-title"><td colspan="'+(c.columns.length+1)+'">'+esc(title)+'</td></tr><tr class="ps-head">'+['ت',...c.columns.map(x=>x[1])].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>'+rows+'</tbody></table><div class="ps-signatures">'+members+'</div>'} 
-$('printBtn').addEventListener('click',()=>{if(!active)return;makePrintSheet();window.print()});
+function printCleanSheet(){const frame=document.createElement('iframe');frame.setAttribute('aria-hidden','true');frame.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0';document.body.appendChild(frame);const styles=Array.from(document.querySelectorAll('style')).map(x=>x.outerHTML).join(''),doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title> </title>'+styles+'</head><body><main id="tablePanel"><div id="printSheet">'+$('printSheet').innerHTML+'</div></main></body></html>');doc.close();setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}finally{setTimeout(()=>frame.remove(),2500)}},180)}
+$('printBtn').addEventListener('click',()=>{if(!active)return;makePrintSheet();printCleanSheet()});
 $('imageBtn').addEventListener('click',saveImageOnePage);
 function applyTheme(){let dark=false;try{dark=localStorage.getItem('inventory-forms-theme-v1')==='dark'}catch(e){}document.documentElement.classList.toggle('dark',dark);$('themeToggle').textContent=dark?'☀️':'🌙';$('themeToggle').title=dark?'تفعيل الوضع النهاري':'تفعيل الوضع الليلي';$('themeToggle').setAttribute('aria-label',$('themeToggle').title)}
 applyTheme();
